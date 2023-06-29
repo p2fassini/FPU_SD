@@ -54,8 +54,12 @@ sum_sub SmallAlu #(N_exp)(
     .Cout()
 );
 
+//Instanciação do primeiro Shifter (relacionado à diferença de expoentes)
 
+wire [N_exp-1:0] shift_amout_un;
+assign shift_amout_un = (diferenca_exp[N_exp-1])? (~diferenca_exp+1):diferenca_exp;
 
+ShiftModule #(DATA_WIDTH=N_mant+1, SHIFT_AMOUNT= , 1) Shift_Dif (.data_in(), .shifted_data());
 
 
 
