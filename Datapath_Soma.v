@@ -62,24 +62,45 @@ assign shift_amout_un = (diferenca_exp[N_exp-1])? (~diferenca_exp+1):diferenca_e
 //Muxes da entrada do primeiro Shifter
 
 wire [N_mant:0] Shift_Dif_in;
-wire [N_mant:0] BigAlu_in_left;
-wire [N_mant:0] BigAlu_in_right;
+wire [N_mant:0] Alu_BGE_in_left;
+wire [N_mant:0] Alu_BGE_in_right;
 
 assign Shift_Dif_in = (diferenca_exp[N_exp-1])?mant_A_imp:mant_B_imp; 
-assign BigAlu_in_right = (diferenca_exp[N_exp-1])?mant_B_imp:mant_A_imp;   
+assign Alu_BGE_in_right = (diferenca_exp[N_exp-1])?mant_B_imp:mant_A_imp;   
 
 
-ShiftModule #(DATA_WIDTH=N_mant+1, SHIFT_AMOUNT= , 1) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(BigAlu_in_left));
+ShiftModule #(DATA_WIDTH=N_mant+1, SHIFT_AMOUNT= , 1) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(Alu_BGE_in_left));
+
+wire sinal_bge_in_left;
+assign sinal_bge_in_left = (diferenca_exp[N_exp-1])?sig_A:sig_B;
+wire sinal_bge_in_right;
+assign sinal_bge_in_right = (diferenca_exp[N_exp-1])?sig_B:sig_A; 
+
+//instanciacao alu bge
+wire [N_mant-1:0] maior_mantissa;
+wire [N_mant-1:0] menor_mantissa;
+wire sinal_resultado;
+
+Alu_BGE maior_mantissa #(WIDTH = N_mant+1)(
+  .left(Alu_BGE_in_left),
+  .sinal_left(sinal_bge_in_left),
+  .right(Alu_BGE_in_right),
+  .sinal_right(sinal_bge_in_right),
+  .maior_mantissa(maior_mantissa),
+  .menor_mantissa(menor_mantissa),
+  .sinal_resultado(sinal_resultado),
+  .Cout()
+);
+
 
 //Instanciação da Big Alu
 
 sum_sub #(N_mant+1) BigAlu (
-.A(BigAlu_in_left)
-.B(BigAlu_in_right)
-.subtract()
-.result()
+.A(maior_mantissa),
+.B(menor_mantissa),
+.subtract(sig_A^sig_B),
+.result(),
 .Cout()
-
 );
 
 
