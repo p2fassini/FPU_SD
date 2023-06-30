@@ -1,4 +1,4 @@
-module UC #(
+module UC (
     input clk, start, reset,
     input [1:0] antes_virgula,
     input check_normalizer_round,
@@ -19,7 +19,7 @@ module UC #(
   reg [3:0] proximo_estado;
 
    // Atribuição do estado inicial
-  initial estado_atual = FETCH;
+  initial estado_atual = INITIAL;
 
     //Definição da máquina de estados
     always @(posedge clk) begin

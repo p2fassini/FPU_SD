@@ -1,13 +1,15 @@
-module Datapath-Soma #(
-    N_float = 32,
-    N_exp= 8,
-    N_mant=23
+module Datapath_Soma #(
+    parameter N_float = 32,
+    parameter N_exp= 8,
+    parameter N_mant=23,
+    parameter N_mant_maisum =24,
+    parameter N_mant_maisdois =25
 ) (
     input [N_float -1:0] float_A,
     input [N_float -1:0] float_B,
     output [N_float -1:0] float_R,
     input [1:0] sel_mux_normalizer,
-    input [1:0] sel_normalizer //sinais de controle da UC 
+    input [1:0] sel_normalizer, //sinais de controle da UC 
     // sinais de controle para UC 
     output [N_exp-1:0] diferenca_exp, 
     output [1:0] antes_virgula
@@ -48,7 +50,7 @@ assign sig_B= float_B[N_float-1];
 
 //Instanciação Small Alu
 
-sum_sub SmallAlu #(N_exp)(
+sum_sub  #(N_exp)SmallAlu (
     .A(exp_A),
     .B(exp_B),
     .subtract(1'b1),
@@ -71,7 +73,7 @@ assign Shift_Dif_in = (diferenca_exp[N_exp-1])?mant_A_imp:mant_B_imp;
 assign Alu_BGE_in_right = (diferenca_exp[N_exp-1])?mant_B_imp:mant_A_imp;   
 
 
-ShiftModule #(DATA_WIDTH=N_mant+1, SHIFT_AMOUNT= , 1) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(Alu_BGE_in_left));
+ShiftModule #(.DATA_WIDTH(N_mant_maisum)) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(Alu_BGE_in_left), .shift_amout(shift_amout_un));
 
 wire sinal_bge_in_left;
 assign sinal_bge_in_left = (diferenca_exp[N_exp-1])?sig_A:sig_B;
@@ -83,7 +85,7 @@ wire [N_mant-1:0] maior_mantissa;
 wire [N_mant-1:0] menor_mantissa;
 wire sinal_resultado;
 
-Alu_BGE maior_mantissa #(WIDTH = N_mant+1)(
+Alu_BGE  #(N_mant_maisum) Alu_BGE_DP (
   .left(Alu_BGE_in_left),
   .sinal_left(sinal_bge_in_left),
   .right(Alu_BGE_in_right),
@@ -100,7 +102,7 @@ Alu_BGE maior_mantissa #(WIDTH = N_mant+1)(
 wire [N_mant:0] result_BigAlu_intermediario;
 wire [N_mant+1:0] result_BigAlu;
 wire Cout;
-sum_sub #(N_mant+1) BigAlu (
+sum_sub #(N_mant_maisum) BigAlu (
 .A(maior_mantissa),
 .B(menor_mantissa),
 .subtract(sig_A^sig_B),
@@ -141,8 +143,8 @@ assign exp_normalizer_in = (sel_mux_normalizer==00)? exp_resultado:
 
 //Instanciação do Normalizer
 
-Normalizer  #( N_mant = N_mant+1,
-    N_exp = N_exp) Normalizer_DP (
+Normalizer  #(.N_mant(N_mant_maisdois),
+    .N_exp(N_exp)) Normalizer_DP (
         .mantissa_in(mant_normalizer_in),
         .expoente_in(exp_normalizer_in),
         .sel(sel_normalizer),
@@ -160,7 +162,7 @@ wire check_normalizer_round;
 
 assign arredondador = 64'd1;
 
-sum_sub #(N_mant+1) RoundHardware (
+sum_sub #(N_mant_maisum) RoundHardware (
     .A(mant_normalizer_out),
     .B(arredondador[N_mant:0]),
     .subtract(1'b0),
