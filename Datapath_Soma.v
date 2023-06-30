@@ -6,9 +6,11 @@ module Datapath-Soma #(
     input [N_float -1:0] float_A,
     input [N_float -1:0] float_B,
     output [N_float -1:0] float_R,
-    input  BigAlu_in_A, BigAlu_in_B, ShiftDif_amount, Exp_sel, ShiftNorm_sel, ShiftNorm_amount, Increment_sel, Increment_amount, Roud_amount, //sinais de controle da UC 
+    input [1:0] sel_mux_normalizer,
+    input [1:0] sel_normalizer //sinais de controle da UC 
     // sinais de controle para UC 
-    output [N_exp-1:0] diferenca_exp 
+    output [N_exp-1:0] diferenca_exp, 
+    output [1:0] antes_virgula
 );
 
 
@@ -114,10 +116,60 @@ wire [N_exp-1:0] exp_resultado;
 
 assign exp_resultado = (diferenca_exp)? exp_B: exp_A;
 
-//
+//Preparação instanciação Normalizer Hardware
 
+wire [N_mant+1:0] mant_normalizer_in;
+wire [N_exp-1:0] exp_normalizer_in;
 
+assign antes_virgula = mant_normalizer_in [N_mant+1:N_mant]; 
 
+wire [N_mant:0] mant_normalizer_out;
+wire [N_exp-1:0] exp_normalizer_out;
+wire mantissa_lsb;
 
+wire [N_mant:0] mant_round;
+wire [N_exp-1:0] exp_round;
+
+//mux triplo
+assign mant_normalizer_in = (sel_mux_normalizer==00)? result_BigAlu:
+                         (sel_mux_normalizer== 01)? {mant_normalizer_out, mantissa_lsb}:
+                         (sel_mux_normalizer ==10)? mant_round:result_BigAlu;
+
+assign exp_normalizer_in = (sel_mux_normalizer==00)? exp_resultado:
+                         (sel_mux_normalizer== 01)? exp_normalizer_out:
+                         (sel_mux_normalizer ==10)? exp_round:exp_resultado;
+
+//Instanciação do Normalizer
+
+Normalizer  #( N_mant = N_mant+1,
+    N_exp = N_exp) Normalizer_DP (
+        .mantissa_in(mant_normalizer_in),
+        .expoente_in(exp_normalizer_in),
+        .sel(sel_normalizer),
+        .mantissa_out(mant_normalizer_out),
+        .expoente_out(exp_normalizer_out),
+        .mantissa_lsb(mantissa_lsb)
+        );
+
+//Instanciação do Round
+
+assign exp_round = exp_normalizer_out;
+
+wire [63:0] arredondador;
+wire check_normalizer_round;
+
+assign arredondador = 64'd1;
+
+sum_sub #(N_mant+1) RoundHardware (
+    .A(mant_normalizer_out),
+    .B(arredondador[N_mant:0]),
+    .subtract(1'b0),
+    .result(mant_round),
+    .Cout(check_normalizer_round)
+    );
+
+//Finalizando
+
+assign float_R = {sinal_resultado, exp_round, mant_round[N_mant-1:0]};
 
 endmodule
