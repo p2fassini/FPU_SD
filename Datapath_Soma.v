@@ -10,8 +10,9 @@ module Datapath_Soma #(
     output [N_float -1:0] float_R,
     input [1:0] sel_mux_normalizer,
     input [1:0] sel_normalizer, //sinais de controle da UC 
+    input sinal_01,
     // sinais de controle para UC 
-    output [N_exp-1:0] diferenca_exp, 
+    output check_normalizer_round,
     output [1:0] antes_virgula
 );
 
@@ -49,6 +50,7 @@ assign sig_A= float_A[N_float-1];
 assign sig_B= float_B[N_float-1];
 
 //Instanciação Small Alu
+wire [N_exp-1:0] diferenca_exp;
 
 sum_sub  #(N_exp)SmallAlu (
     .A(exp_A),
@@ -73,7 +75,7 @@ assign Shift_Dif_in = (diferenca_exp[N_exp-1])?mant_A_imp:mant_B_imp;
 assign Alu_BGE_in_right = (diferenca_exp[N_exp-1])?mant_B_imp:mant_A_imp;   
 
 
-ShiftModule #(.DATA_WIDTH(N_mant_maisum)) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(Alu_BGE_in_left), .shift_amout(shift_amout_un));
+ShiftModule #(.N_mant(N_mant_maisum), .N_exp(N_exp)) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(Alu_BGE_in_left), .shift_amout(shift_amout_un));
 
 wire sinal_bge_in_left;
 assign sinal_bge_in_left = (diferenca_exp[N_exp-1])?sig_A:sig_B;
@@ -81,8 +83,8 @@ wire sinal_bge_in_right;
 assign sinal_bge_in_right = (diferenca_exp[N_exp-1])?sig_B:sig_A; 
 
 //instanciacao alu bge
-wire [N_mant-1:0] maior_mantissa;
-wire [N_mant-1:0] menor_mantissa;
+wire [N_mant:0] maior_mantissa;
+wire [N_mant:0] menor_mantissa;
 wire sinal_resultado;
 
 Alu_BGE  #(N_mant_maisum) Alu_BGE_DP (
@@ -116,7 +118,7 @@ assign result_BigAlu = {Cout,result_BigAlu_intermediario};
 
 wire [N_exp-1:0] exp_resultado;
 
-assign exp_resultado = (diferenca_exp)? exp_B: exp_A;
+assign exp_resultado = (diferenca_exp[N_exp-1])? exp_B: exp_A;
 
 //Preparação instanciação Normalizer Hardware
 
@@ -158,9 +160,8 @@ Normalizer  #(.N_mant(N_mant_maisdois),
 assign exp_round = exp_normalizer_out;
 
 wire [63:0] arredondador;
-wire check_normalizer_round;
 
-assign arredondador = 64'd1;
+assign arredondador = {63'b0,mantissa_lsb};
 
 sum_sub #(N_mant_maisum) RoundHardware (
     .A(mant_normalizer_out),
@@ -172,6 +173,7 @@ sum_sub #(N_mant_maisum) RoundHardware (
 
 //Finalizando
 
-assign float_R = {sinal_resultado, exp_round, mant_round[N_mant-1:0]};
+assign float_R = (~sinal_01)?{sinal_resultado, exp_round, mant_round[N_mant-1:0]}:
+                    {sinal_resultado,exp_normalizer_in,mant_normalizer_in[N_mant-3:0]};
 
 endmodule

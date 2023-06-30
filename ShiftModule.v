@@ -10,6 +10,6 @@ module ShiftModule #(parameter N_mant = 24, parameter N_exp = 8, parameter SHIFT
   assign shifted_left = data_in << shift_amout;
   assign shifted_right = data_in >> shift_amout;
 
-  assign shifted_data = (SHIFT_DIRECTION == 0) ? shifted_left : shifted_right;
+  assign shifted_data = (SHIFT_DIRECTION == 1) ? shifted_left : shifted_right;
 
 endmodule
