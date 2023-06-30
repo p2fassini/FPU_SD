@@ -95,15 +95,26 @@ Alu_BGE maior_mantissa #(WIDTH = N_mant+1)(
 
 //Instanciação da Big Alu
 
+wire [N_mant:0] result_BigAlu_intermediario;
+wire [N_mant+1:0] result_BigAlu;
+wire Cout;
 sum_sub #(N_mant+1) BigAlu (
 .A(maior_mantissa),
 .B(menor_mantissa),
 .subtract(sig_A^sig_B),
-.result(),
-.Cout()
+.result(result_BigAlu_intermediario),
+.Cout(Cout)
 );
 
+assign result_BigAlu = {Cout,result_BigAlu_intermediario};
 
+//Determinando expoente até o momento (igual para o float A e B)
+
+wire [N_exp-1:0] exp_resultado;
+
+assign exp_resultado = (diferenca_exp)? exp_B: exp_A;
+
+//
 
 
 
