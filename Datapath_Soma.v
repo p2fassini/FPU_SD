@@ -57,11 +57,30 @@ sum_sub SmallAlu #(N_exp)(
 //Instanciação do primeiro Shifter (relacionado à diferença de expoentes)
 
 wire [N_exp-1:0] shift_amout_un;
-assign shift_amout_un = (diferenca_exp[N_exp-1])? (~diferenca_exp+1):diferenca_exp;
+assign shift_amout_un = (diferenca_exp[N_exp-1])? (~diferenca_exp+1):diferenca_exp; //revertendo o complemento de dois
 
-ShiftModule #(DATA_WIDTH=N_mant+1, SHIFT_AMOUNT= , 1) Shift_Dif (.data_in(), .shifted_data());
+//Muxes da entrada do primeiro Shifter
+
+wire [N_mant:0] Shift_Dif_in;
+wire [N_mant:0] BigAlu_in_left;
+wire [N_mant:0] BigAlu_in_right;
+
+assign Shift_Dif_in = (diferenca_exp[N_exp-1])?mant_A_imp:mant_B_imp; 
+assign BigAlu_in_right = (diferenca_exp[N_exp-1])?mant_B_imp:mant_A_imp;   
 
 
+ShiftModule #(DATA_WIDTH=N_mant+1, SHIFT_AMOUNT= , 1) Shift_Dif (.data_in(Shift_Dif_in), .shifted_data(BigAlu_in_left));
+
+//Instanciação da Big Alu
+
+sum_sub #(N_mant+1) BigAlu (
+.A(BigAlu_in_left)
+.B(BigAlu_in_right)
+.subtract()
+.result()
+.Cout()
+
+);
 
 
 
